@@ -35,6 +35,7 @@ import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ISaveGameStateResponseListener;
 import de.golfgl.gdxgamesvcs.leaderboard.IFetchLeaderBoardEntriesResponseListener;
 import de.golfgl.gdxgamesvcs.leaderboard.ILeaderBoardEntry;
+import de.golfgl.gdxgamesvcs.player.IPlayerDataResponseListener;
 
 /**
  * Google Play Games Services Desktop implementation based on REST API :
@@ -330,6 +331,11 @@ public class GpgsClient implements IGameServiceClient {
     @Override
     public String getPlayerDisplayName() {
         return playerName;
+    }
+
+    @Override
+    public boolean getPlayerData(IPlayerDataResponseListener callback) {
+        return false;
     }
 
     @Override
