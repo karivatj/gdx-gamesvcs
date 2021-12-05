@@ -123,7 +123,7 @@ public interface IGameServiceClient {
     /**
      * Checks if a user session connection attempt is running
      *
-     * @return
+     * @return boolean which describes if the connection attempt is pending
      */
     boolean isConnectionPending();
 
@@ -148,7 +148,7 @@ public interface IGameServiceClient {
      * Should only be called when {@link GameServiceFeature#FetchAchievements} is supported,
      * check {@link #isFeatureSupported(GameServiceFeature)} prior to call this method.
      *
-     * @param callback
+     * @param callback the listener that will be notified about the result
      * @return false if fetch attempt could not be made. Response listener will not get called in that case.
      * @throws UnsupportedOperationException if not supported by game service client, so check
      *                                       {@link #isFeatureSupported(GameServiceFeature)} prior to call this method.
@@ -162,8 +162,8 @@ public interface IGameServiceClient {
      * info level. If the connection is not open, this is no error - some game services allow submitting scores
      * without a user session.
      *
-     * @param leaderboardId
-     * @param score
+     * @param leaderboardId leaderboard id where the score is submitted
+     * @param score         score that will be submitted
      * @param tag           an optional information to post on the leader board, if API supports it. May be null.
      * @return false if submission couldn't be made. true if submit request was made (regardless if it was successful)
      */
@@ -267,6 +267,7 @@ public interface IGameServiceClient {
      * {@link GameServiceFeature#GameStateStorage} ()} before calling.
      *
      * @param fileId file id to load from when multiple files are supported. Ignored otherwise
+     * @param responseListener the listener that will be notified about the result
      */
     void loadGameState(String fileId, ILoadGameStateResponseListener responseListener);
 
@@ -284,7 +285,7 @@ public interface IGameServiceClient {
     /**
      * Fetch current player's game states.
      *
-     * @param callback
+     * @param callback the listener that will be notified about the result
      * @return false if fetch attempt could not be made. Response listener will not get called in that case.
      * @throws UnsupportedOperationException if not supported by game service client, so check
      *                                       {@link #isFeatureSupported(GameServiceFeature)} prior to call this method.
@@ -294,7 +295,7 @@ public interface IGameServiceClient {
     /**
      * Queries if a certain feature is available for this Game Service
      *
-     * @param feature
+     * @param feature feature to query if it is supported
      * @return true if feature is supported by implementation and game service
      */
     boolean isFeatureSupported(GameServiceFeature feature);
