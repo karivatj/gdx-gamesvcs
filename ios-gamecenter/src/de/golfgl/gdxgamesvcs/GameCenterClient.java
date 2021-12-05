@@ -66,14 +66,14 @@ public class GameCenterClient implements IGameServiceClient {
 						lastGotLoginScreen = null;
 						Gdx.app.debug(GAMESERVICE_ID, "Successfully logged into GameCenter");
 						if (gsListener != null) {
-							gsListener.gsOnSessionActive();
+							gsListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
 						}
 					} else {
 						if (gkViewController != null)
 							lastGotLoginScreen = gkViewController;
 						Gdx.app.debug(GAMESERVICE_ID, "Did not authenticate.");
 						if (gsListener != null)
-							gsListener.gsOnSessionInactive();
+							gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
 						if (callLoginFromHandler)
 							logIn();
 					}
@@ -97,7 +97,7 @@ public class GameCenterClient implements IGameServiceClient {
 			    // unfortunately, the login window will never call back
 			    viewController.presentViewController(lastGotLoginScreen, true, null);
 			else if (gsListener != null)
-			    gsListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed,
+			    gsListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed,
                         "Please use Game Center settings to log in", null);
 		}
 		return isSessionActive() || lastGotLoginScreen != null;
@@ -112,7 +112,7 @@ public class GameCenterClient implements IGameServiceClient {
 	public void logOff() {
 		//nothing to do, inform the user to log out via GameCenter app
 		if (gsListener != null)
-			gsListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLogoutFailed,
+			gsListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLogoutFailed,
 					"Please logout via GameCenter's interface", null);
 	}
 

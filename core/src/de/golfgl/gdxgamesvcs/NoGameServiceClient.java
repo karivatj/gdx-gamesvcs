@@ -59,7 +59,7 @@ public class NoGameServiceClient implements IGameServiceClient {
         connected = true;
 
         if (gsListener != null)
-            gsListener.gsOnSessionActive();
+            gsListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
 
         return true;
     }
@@ -70,7 +70,7 @@ public class NoGameServiceClient implements IGameServiceClient {
         connected = false;
 
         if (gsListener != null)
-            gsListener.gsOnSessionInactive();
+            gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.connectionPaused);
     }
 
     @Override

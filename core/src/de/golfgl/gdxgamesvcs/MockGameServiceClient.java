@@ -113,7 +113,7 @@ abstract public class MockGameServiceClient implements IGameServiceClient
 				public void run() {
 					connecting = false;
 					connected = true;
-					if(gsListener != null) gsListener.gsOnSessionActive();
+					if(gsListener != null) gsListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
 				}
 			});
 		}
@@ -126,7 +126,7 @@ abstract public class MockGameServiceClient implements IGameServiceClient
 
 			@Override
 			public void run() {
-				if(gsListener != null) gsListener.gsOnSessionInactive();
+				if(gsListener != null) gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.connectionPaused);
 			}
 		});
 	}

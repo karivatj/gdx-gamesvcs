@@ -163,9 +163,9 @@ public class GpgsClient implements IGameServiceClient {
 
         if (gsListener != null) {
             if (sessionActive)
-                gsListener.gsOnSessionActive();
+                gsListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
             else
-                gsListener.gsOnSessionInactive();
+                gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
         }
     }
 
@@ -267,17 +267,15 @@ public class GpgsClient implements IGameServiceClient {
 
     protected void onDisplayName(String displayName) {
         this.displayName = displayName;
-        if (gsListener != null)
-            gsListener.gsOnSessionActive();
     }
 
     protected void onInitError(String msg) {
         initialized = false;
         connectionPending = false;
         if (gsListener != null) {
-            gsListener.gsOnSessionInactive();
+            gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
             if (!isSilentConnect)
-                gsListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed, msg, null);
+                gsListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed, msg, null);
         }
     }
 

@@ -80,9 +80,9 @@ public class KongClient implements IGameServiceClient {
         // if Kong API has initialized, check if user session is active
         if (gsListener != null) {
             if (!isKongGuest())
-                gsListener.gsOnSessionActive();
+                gsListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
             else
-                gsListener.gsOnSessionInactive();
+                gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
         }
     }
 
@@ -111,7 +111,7 @@ public class KongClient implements IGameServiceClient {
     public void logOff() {
         //nothing to do, inform the user to log out via web interface
         if (gsListener != null)
-            gsListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLogoutFailed,
+            gsListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLogoutFailed,
                     "Please logout via Kongregate's interface", null);
     }
 

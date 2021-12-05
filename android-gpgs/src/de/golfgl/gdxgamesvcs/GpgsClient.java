@@ -201,8 +201,13 @@ public class GpgsClient implements GoogleApiClient.ConnectionCallbacks, GoogleAp
                     // eat security exceptions when already signed out via gpgs ui
                 }
             mGoogleApiClient.disconnect();
-            if (gameListener != null)
-                gameListener.gsOnSessionInactive();
+            if (gameListener != null){
+                if(autoEnd) {
+                    gameListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.connectionPaused);
+                } else {
+                    gameListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.signedOut);
+                }
+            }
         }
     }
 
@@ -216,7 +221,7 @@ public class GpgsClient implements GoogleApiClient.ConnectionCallbacks, GoogleAp
         firstConnectAttempt = MAX_CONNECTFAIL_RETRIES;
         isConnectionPending = false;
         if (gameListener != null)
-            gameListener.gsOnSessionActive();
+            gameListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
     }
 
     @Override
@@ -301,7 +306,7 @@ public class GpgsClient implements GoogleApiClient.ConnectionCallbacks, GoogleAp
 
         // inform listener that connection attempt failed
         if (gameListener != null && isPendingBefore && !isConnectionPending)
-            gameListener.gsOnSessionInactive();
+            gameListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
     }
 
     public void signInResult(int resultCode, Intent data) {
@@ -318,7 +323,7 @@ public class GpgsClient implements GoogleApiClient.ConnectionCallbacks, GoogleAp
 
             // inform listener that connection attempt failed
             if (gameListener != null && isPendingBefore)
-                gameListener.gsOnSessionInactive();
+                gameListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
 
             // Bring up an error dialog to alert the user that sign-in
             // failed. The R.string.signin_failure should reference an error
@@ -341,7 +346,7 @@ public class GpgsClient implements GoogleApiClient.ConnectionCallbacks, GoogleAp
             }
 
             if (errorMsg != null && gameListener != null)
-                gameListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed,
+                gameListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed,
                         "Google Play Games: " + errorMsg, null);
 
         }

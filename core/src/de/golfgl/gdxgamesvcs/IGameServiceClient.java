@@ -94,6 +94,7 @@ public interface IGameServiceClient {
      *
      * @return Display name, if available. May return null.
      */
+    @Deprecated
     String getPlayerDisplayName();
 
     /**

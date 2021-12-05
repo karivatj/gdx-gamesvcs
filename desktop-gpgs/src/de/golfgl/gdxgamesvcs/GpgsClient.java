@@ -28,7 +28,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.golfgl.gdxgamesvcs.GameServiceException.NotSupportedException;
-import de.golfgl.gdxgamesvcs.IGameServiceListener.GsErrorType;
 import de.golfgl.gdxgamesvcs.achievement.IAchievement;
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
@@ -119,7 +118,7 @@ public class GpgsClient implements IGameServiceClient {
                     runnable.run();
                 } catch (Throwable e) {
                     Gdx.app.error(TAG, "Gpgs Error", e);
-                    if (gameListener != null) gameListener.gsShowErrorToUser(GsErrorType.errorUnknown, e.getMessage(), e);
+                    if (gameListener != null) gameListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorUnknown, e.getMessage(), e);
                 }
             }
         }).start();
@@ -256,7 +255,7 @@ public class GpgsClient implements IGameServiceClient {
             success = true;
         } catch (IOException e) {
             if (gameListener != null && !silent)
-                gameListener.gsShowErrorToUser(GsErrorType.errorLoginFailed, "failed to get authorization from user", e);
+                gameListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed, "failed to get authorization from user", e);
         }
 
         // try to retreive palyer name
@@ -268,7 +267,7 @@ public class GpgsClient implements IGameServiceClient {
                 // if that does not work, connection is not possible
                 success = false;
                 if (gameListener != null && !silent)
-                    gameListener.gsShowErrorToUser(GsErrorType.errorLoginFailed, "Request to Google API failed.", e);
+                    gameListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed, "Request to Google API failed.", e);
             }
         }
 
@@ -277,9 +276,9 @@ public class GpgsClient implements IGameServiceClient {
         // dispatch status
         if (gameListener != null) {
             if (connected) {
-                gameListener.gsOnSessionActive();
+                gameListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
             } else {
-                gameListener.gsOnSessionInactive();
+                gameListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
             }
         }
     }
@@ -317,7 +316,7 @@ public class GpgsClient implements IGameServiceClient {
     @Override
     public void pauseSession() {
         // nothing special to do here since there is no resources to freeup.
-        if (gameListener != null) gameListener.gsOnSessionInactive();
+        if (gameListener != null) gameListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.connectionPaused);
     }
 
     @Override

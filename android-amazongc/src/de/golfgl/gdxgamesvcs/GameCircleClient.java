@@ -100,9 +100,9 @@ public class GameCircleClient implements IGameServiceClient {
         isConnectionPending = false;
         isConnected = false;
         if (gsListener != null) {
-            gsListener.gsOnSessionInactive();
+            gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
             if (!autoStartSignInFlow)
-                gsListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed,
+                gsListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed,
                         amazonGamesStatus.name(), null);
         }
     }
@@ -126,13 +126,13 @@ public class GameCircleClient implements IGameServiceClient {
                         if (isConnected) {
                             cachedPlayerAlias = response.getPlayer().getAlias();
                             if (gsListener != null)
-                                gsListener.gsOnSessionActive();
+                                gsListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
                         } else {
                             cachedPlayerAlias = null;
                             if (gsListener != null) {
-                                gsListener.gsOnSessionInactive();
+                                gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
                                 if (!autoStartSignInFlow)
-                                    gsListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed,
+                                    gsListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed,
                                             response.getError().name(), null);
                             }
                         }
@@ -221,7 +221,7 @@ public class GameCircleClient implements IGameServiceClient {
             isConnected = false;
 
             if (gsListener != null)
-                gsListener.gsOnSessionInactive();
+                gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.connectionPaused);
         }
     }
 
@@ -233,7 +233,7 @@ public class GameCircleClient implements IGameServiceClient {
             AmazonGamesClient.shutdown();
             cachedPlayerAlias = null;
             if (gsListener != null)
-                gsListener.gsOnSessionInactive();
+                gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.signedOut);
         }
     }
 

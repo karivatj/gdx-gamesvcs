@@ -219,7 +219,7 @@ public class GameJoltClient implements IGameServiceClient {
                         sendOpenSessionEvent();
 
                         if (gsListener != null)
-                            gsListener.gsOnSessionActive();
+                            gsListener.gsOnSessionActive(IGameServiceListener.GsResultCode.signedIn);
                     } else {
                         Gdx.app.log(GAMESERVICE_ID, "Authentification from GameJolt failed. Check username, token, " +
                                 "app id and private key.");
@@ -284,10 +284,10 @@ public class GameJoltClient implements IGameServiceClient {
         connectionPending = false;
 
         if (gsListener != null) {
-            gsListener.gsOnSessionInactive();
+            gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.errorLoginFailed);
 
             if (!silent)
-                gsListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed, msg, null);
+                gsListener.gsShowErrorToUser(IGameServiceListener.GsResultCode.errorLoginFailed, msg, null);
         }
     }
 
@@ -301,7 +301,7 @@ public class GameJoltClient implements IGameServiceClient {
         connected = false;
 
         if (gsListener != null)
-            gsListener.gsOnSessionInactive();
+            gsListener.gsOnSessionInactive(IGameServiceListener.GsResultCode.connectionPaused);
     }
 
     protected void sendCloseSessionEvent() {
