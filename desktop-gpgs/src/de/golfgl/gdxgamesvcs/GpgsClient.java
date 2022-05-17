@@ -142,6 +142,11 @@ public class GpgsClient implements IGameServiceClient {
     }
 
     @Override
+    public String getServerAuthCode() {
+        return null;
+    }
+
+    @Override
     public void setListener(IGameServiceListener gsListener) {
         gameListener = gsListener;
     }
@@ -374,6 +379,11 @@ public class GpgsClient implements IGameServiceClient {
             });
         }
         return connected;
+    }
+
+    @Override
+    public boolean incrementLeaderboard(String leaderboardId, long score) {
+        return false;
     }
 
     /**
@@ -782,7 +792,7 @@ public class GpgsClient implements IGameServiceClient {
                     try {
                         result = fetchLeaderboardSync(leaderBoardId, limit, relatedToPlayer, false);
                     } finally {
-                        callback.onLeaderBoardResponse(result);
+                        callback.onLeaderBoardResponse(leaderBoardId, result);
                     }
                 }
             });
@@ -820,7 +830,7 @@ public class GpgsClient implements IGameServiceClient {
         if (leaderBoardId == null)
             return null;
 
-        Array<ILeaderBoardEntry> result = new Array<ILeaderBoardEntry>();
+        Array<ILeaderBoardEntry> result = new Array<>();
         Leaderboard lb = GApiGateway.games.leaderboards().get(leaderBoardId).execute();
 
         // XXX no longer LB info ...

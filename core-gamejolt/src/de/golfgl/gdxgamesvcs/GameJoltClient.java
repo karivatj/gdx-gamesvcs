@@ -467,6 +467,12 @@ public class GameJoltClient implements IGameServiceClient {
 
         return true;
     }
+
+    @Override
+    public boolean incrementLeaderboard(String leaderboardId, long score) {
+        return false;
+    }
+
     @Override
     public boolean fetchLeaderboardEntries(String leaderBoardId, int limit, boolean relatedToPlayer,
                                            final IFetchLeaderBoardEntriesResponseListener callback) {
@@ -484,8 +490,10 @@ public class GameJoltClient implements IGameServiceClient {
 
         params.put("limit", String.valueOf(limit));
 
+        Integer boardId = 0;
+
         if (leaderBoardId != null) {
-            Integer boardId = scoreTableMapper.mapToGsId(leaderBoardId);
+            boardId = scoreTableMapper.mapToGsId(leaderBoardId);
             if (boardId != null)
                 params.put("table_id", String.valueOf(boardId));
         }
@@ -493,6 +501,8 @@ public class GameJoltClient implements IGameServiceClient {
         final Net.HttpRequest http = buildJsonRequest("scores/", params);
         if (http == null)
             return false;
+
+        final Integer finalBoardId = boardId;
 
         Gdx.net.sendHttpRequest(http, new Net.HttpResponseListener() {
             @Override
@@ -505,7 +515,7 @@ public class GameJoltClient implements IGameServiceClient {
 
                     if (response == null || !response.getBoolean("success")) {
                         Gdx.app.error(GAMESERVICE_ID, "Could not parse answer from GameJolt: " + json);
-                        callback.onLeaderBoardResponse(null);
+                        callback.onLeaderBoardResponse(finalBoardId.toString(),null);
                     } else {
                         JsonValue scores = response.get("scores");
                         int rank = 0;
@@ -516,22 +526,22 @@ public class GameJoltClient implements IGameServiceClient {
                             if (gje != null)
                                 les.add(gje);
                         }
-                        callback.onLeaderBoardResponse(les);
+                        callback.onLeaderBoardResponse(finalBoardId.toString(), les);
                     }
                 } catch (Throwable t) {
                     Gdx.app.error(GAMESERVICE_ID, "Could not parse answer from GameJolt: " + json, t);
-                    callback.onLeaderBoardResponse(null);
+                    callback.onLeaderBoardResponse(finalBoardId.toString(),null);
                 }
             }
 
             @Override
             public void failed(Throwable t) {
-                callback.onLeaderBoardResponse(null);
+                callback.onLeaderBoardResponse(finalBoardId.toString(), null);
             }
 
             @Override
             public void cancelled() {
-                callback.onLeaderBoardResponse(null);
+                callback.onLeaderBoardResponse(finalBoardId.toString(), null);
             }
         });
 

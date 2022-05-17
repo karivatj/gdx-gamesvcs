@@ -1,6 +1,6 @@
 ext {
     GROUPID = 'de.golfgl.gdxgamesvcs'
-    VERSION = '1.1.0'
+    VERSION = '1.1.1'
 }
 
 buildscript {
@@ -26,7 +26,7 @@ allprojects {
         minSdkVer = 16
         targetSdkVer = 30
         compileSdkVer = 30
-        buildToolsVer = '30.0.2'
+        buildToolsVer = '30.0.3'
 
         gdxVersion = '1.9.8'
         roboVMVersion = '2.3.5'
@@ -72,7 +72,7 @@ project(":android-gpgs") {
         api "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
     }
 }
-
+/*
 project(":android-amazongc") {
     apply plugin: 'com.android.library'
 
@@ -102,7 +102,7 @@ project(":android-huawei") {
         api "com.badlogicgames.gdx:gdx-backend-android:$gdxVersion"
     }
 }
-
+*/
 project(":core") {
     apply plugin: 'java-library'
 
@@ -116,7 +116,7 @@ project(":core") {
         api "com.badlogicgames.gdx:gdx:$gdxVersion"
     }
 }
-
+/*
 project(":core-gamejolt") {
     apply plugin: 'java'
 
@@ -131,7 +131,7 @@ project(":core-gamejolt") {
         implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
     }
 }
-
+*/
 project(":desktop-gpgs") {
     apply plugin: 'java'
 
@@ -156,7 +156,7 @@ project(":desktop-gpgs") {
         testImplementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
     }
 }
-
+/*
 project(":html-kong") {
     apply plugin: 'java'
 
@@ -211,3 +211,4 @@ project(":ios-gamecenter") {
         implementation "com.mobidevelop.robovm:robovm-cocoatouch:$roboVMVersion"
     }
 }
+*/

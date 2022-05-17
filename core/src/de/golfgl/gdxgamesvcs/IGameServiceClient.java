@@ -34,6 +34,16 @@ public interface IGameServiceClient {
      */
     String getGameServiceId();
 
+
+    /**
+     * Gets the server authentication code if the connection was initialized with a webclient id. Intended to be used together with
+     * Firebasee
+     *
+     * @return Server authentication code
+     */
+    String getServerAuthCode();
+
+
     /**
      * Set this listener to get callbacks from the game service client
      * <p>
@@ -167,6 +177,19 @@ public interface IGameServiceClient {
      * @return false if submission couldn't be made. true if submit request was made (regardless if it was successful)
      */
     boolean submitToLeaderboard(String leaderboardId, long score, String tag);
+
+    /**
+     * Increments a score to given leaderboard.
+     * <p>
+     * This API is of type fire and forget. Every possible error is checked by the API and not thrown, but logged on
+     * info level. If the connection is not open, this is no error - some game services allow submitting scores
+     * without a user session.
+     *
+     * @param leaderboardId leaderboard id where the score is submitted
+     * @param score         score increment that will be added to the current score
+     * @return false if submission couldn't be made. true if submit request was made (regardless if it was successful)
+     */
+    boolean incrementLeaderboard(String leaderboardId, long score);
 
     /**
      * Fetches leaderboard entries

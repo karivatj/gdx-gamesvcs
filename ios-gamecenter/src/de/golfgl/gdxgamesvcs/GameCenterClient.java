@@ -196,6 +196,11 @@ public class GameCenterClient implements IGameServiceClient {
 	}
 
 	@Override
+	public boolean incrementLeaderboard(String leaderboardId, long score) {
+		return false;
+	}
+
+	@Override
 	public boolean fetchLeaderboardEntries(String leaderBoardId, int limit, boolean relatedToPlayer,
 										   IFetchLeaderBoardEntriesResponseListener callback) {
 		throw new UnsupportedOperationException();

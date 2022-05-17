@@ -293,6 +293,11 @@ public class GameCircleClient implements IGameServiceClient {
     }
 
     @Override
+    public boolean incrementLeaderboard(String leaderboardId, long score) {
+        return false;
+    }
+
+    @Override
     public boolean fetchLeaderboardEntries(String leaderBoardId, int limit, boolean relatedToPlayer,
                                            IFetchLeaderBoardEntriesResponseListener callback) {
         //TODO supported by GameCircle

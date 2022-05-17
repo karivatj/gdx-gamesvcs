@@ -12,7 +12,8 @@ public interface IFetchLeaderBoardEntriesResponseListener {
     /**
      * Called when leaderBoard entries are received.
      *
+     * @param leaderboardId leaderboardId of the leaderboard that was attempted to fetch
      * @param leaderBoard null if leaderBoard couldn't be fetched.
      */
-    void onLeaderBoardResponse(Array<ILeaderBoardEntry> leaderBoard);
+    void onLeaderBoardResponse(String leaderboardId, Array<ILeaderBoardEntry> leaderBoard);
 }

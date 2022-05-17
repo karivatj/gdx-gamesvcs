@@ -186,7 +186,12 @@ public class KongClient implements IGameServiceClient {
     }
 
     @Override
-    public boolean fetchLeaderboardEntries(String leaderBoardId, final int limit, boolean relatedToPlayer,
+    public boolean incrementLeaderboard(String leaderboardId, long score) {
+        return false;
+    }
+
+    @Override
+    public boolean fetchLeaderboardEntries(final String leaderBoardId, final int limit, boolean relatedToPlayer,
                                            final IFetchLeaderBoardEntriesResponseListener callback) {
         //this does not work without hosting an own webservice, thus isFeatureSupported does not report it as supported
         //See issue #13 https://github.com/MrStahlfelge/gdx-gamesvcs/issues/13 for more information
@@ -194,7 +199,7 @@ public class KongClient implements IGameServiceClient {
         if (statIdMapper == null)
             throw new IllegalStateException("Call setStatIdMapper before querying stats");
 
-        Integer statId = statIdMapper.mapToGsId(leaderBoardId);
+        final Integer statId = statIdMapper.mapToGsId(leaderBoardId);
 
         if (statId == null)
             return false;
@@ -223,24 +228,24 @@ public class KongClient implements IGameServiceClient {
                                 le.add(kse);
                             }
 
-                            callback.onLeaderBoardResponse(le);
+                            callback.onLeaderBoardResponse(statId.toString(), le);
 
                         } catch (Throwable t) {
                             Gdx.app.error(GAMESERVICE_ID, "Error querying stats " + json, t);
-                            callback.onLeaderBoardResponse(null);
+                            callback.onLeaderBoardResponse(statId.toString(), null);
                         }
                     }
 
                     @Override
                     public void failed(Throwable t) {
                         Gdx.app.error(GAMESERVICE_ID, "Query stat failed", t);
-                        callback.onLeaderBoardResponse(null);
+                        callback.onLeaderBoardResponse(statId.toString(), null);
                     }
 
                     @Override
                     public void cancelled() {
                         Gdx.app.error(GAMESERVICE_ID, "Query stat cancelled");
-                        callback.onLeaderBoardResponse(null);
+                        callback.onLeaderBoardResponse(statId.toString(), null);
                     }
                 });
 

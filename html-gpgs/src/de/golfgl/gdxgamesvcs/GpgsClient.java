@@ -375,6 +375,11 @@ public class GpgsClient implements IGameServiceClient {
             return false;
     }
 
+    @Override
+    public boolean incrementLeaderboard(String leaderboardId, long score) {
+        return false;
+    }
+
     private native void nativeSubmitScore(String leaderboardId, double scoreVar, String tag) /*-{
         var param;
 

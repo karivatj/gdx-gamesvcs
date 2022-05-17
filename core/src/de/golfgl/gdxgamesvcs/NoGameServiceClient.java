@@ -37,6 +37,11 @@ public class NoGameServiceClient implements IGameServiceClient {
     }
 
     @Override
+    public String getServerAuthCode() {
+        return null;
+    }
+
+    @Override
     public void setListener(IGameServiceListener gsListener) {
         this.gsListener = gsListener;
     }
@@ -124,6 +129,11 @@ public class NoGameServiceClient implements IGameServiceClient {
         Gdx.app.log(GAMESERVICE_ID, "Submit to leaderboard " + leaderboardId + ", score " + score + ", tag " + tag);
 
         return isSessionActive();
+    }
+
+    @Override
+    public boolean incrementLeaderboard(String leaderboardId, long score) {
+        return false;
     }
 
     @Override

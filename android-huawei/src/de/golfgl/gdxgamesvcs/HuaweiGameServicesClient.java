@@ -360,6 +360,11 @@ public class HuaweiGameServicesClient implements IGameServiceClient, AndroidEven
     }
 
     @Override
+    public boolean incrementLeaderboard(String leaderboardId, long score) {
+        return false;
+    }
+
+    @Override
     public boolean fetchLeaderboardEntries(String leaderBoardId, int limit, boolean relatedToPlayer,
                                            IFetchLeaderBoardEntriesResponseListener callback) {
         if (!this.isSessionActive) {
@@ -388,13 +393,13 @@ public class HuaweiGameServicesClient implements IGameServiceClient, AndroidEven
 
 
 
-    private void fetchLeadeboardEntriesRelatedToPLayer(String leaderBoardId, int limit, final IFetchLeaderBoardEntriesResponseListener callback) {
+    private void fetchLeadeboardEntriesRelatedToPLayer(final String leaderBoardId, int limit, final IFetchLeaderBoardEntriesResponseListener callback) {
         Task<RankingsClient.RankingScores> task = this.leaderboardsClient.getPlayerCenteredRankingScores(leaderBoardId, 2, limit, true);
         task.addOnSuccessListener(new OnSuccessListener<RankingsClient.RankingScores>() {
             @Override
             public void onSuccess(RankingsClient.RankingScores rankingScores) {
                 Array<ILeaderBoardEntry> list = HuaweiGameServicesUtils.getILeaderboardsEntriesList(rankingScores, currentPlayer.getPlayerId());
-                callback.onLeaderBoardResponse(list);
+                callback.onLeaderBoardResponse(leaderBoardId, list);
             }
         });
 
@@ -406,13 +411,13 @@ public class HuaweiGameServicesClient implements IGameServiceClient, AndroidEven
         });
     }
 
-    private void fetchLeadeboardEntries(String leaderBoardId, int limit, final IFetchLeaderBoardEntriesResponseListener callback) {
+    private void fetchLeadeboardEntries(final String leaderBoardId, int limit, final IFetchLeaderBoardEntriesResponseListener callback) {
         Task<RankingsClient.RankingScores> task = this.leaderboardsClient.getRankingTopScores(leaderBoardId, 2, limit, true);
         task.addOnSuccessListener(new OnSuccessListener<RankingsClient.RankingScores>() {
             @Override
             public void onSuccess(RankingsClient.RankingScores rankingScores) {
                 Array<ILeaderBoardEntry> list = HuaweiGameServicesUtils.getILeaderboardsEntriesList(rankingScores, currentPlayer.getPlayerId());
-                callback.onLeaderBoardResponse(list);
+                callback.onLeaderBoardResponse(leaderBoardId, list);
             }
         });
 
