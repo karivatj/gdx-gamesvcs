@@ -24,11 +24,11 @@ allprojects {
 
     ext {
         minSdkVer = 16
-        targetSdkVer = 30
-        compileSdkVer = 30
-        buildToolsVer = '30.0.3'
+        targetSdkVer = 33
+        compileSdkVer = 33
+        buildToolsVer = '34.0.1'
 
-        gdxVersion = '1.9.8'
+        gdxVersion = '1.11.0'
         roboVMVersion = '2.3.5'
 
         //Variables used in publishing step

@@ -397,7 +397,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                         playerData.playerId = player.getPlayerId();
                         playerData.displayName = player.getDisplayName();
                         playerData.title = player.getTitle();
-                        playerData.name = player.getName();
+                        playerData.name = "";
 
                         if (callback != null)
                             callback.onPlayerDataResponse(playerData);
@@ -933,7 +933,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                         Array<String> gameStates = new Array<>(snapshots.getCount());
 
                         for (SnapshotMetadata snapshot : snapshots) {
-                            gameStates.add(snapshot.getTitle());
+                            gameStates.add(snapshot.getUniqueName());
                         }
 
                         snapshots.release();
