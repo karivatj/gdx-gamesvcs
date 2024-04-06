@@ -31,6 +31,7 @@ import de.golfgl.gdxgamesvcs.GameServiceException.NotSupportedException;
 import de.golfgl.gdxgamesvcs.IGameServiceListener.GsErrorType;
 import de.golfgl.gdxgamesvcs.achievement.IAchievement;
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
+import de.golfgl.gdxgamesvcs.friend.IFriendsDataResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ISaveGameStateResponseListener;
@@ -365,6 +366,21 @@ public class GpgsClient implements IGameServiceClient {
 
     @Override
     public void showAchievements() throws GameServiceException {
+        throw new NotSupportedException();
+    }
+
+    @Override
+    public void showFriends(IFriendsDataResponseListener callback) throws GameServiceException {
+        throw new NotSupportedException();
+    }
+
+    @Override
+    public void showPlayerProfile(String playerId) throws GameServiceException {
+        throw new NotSupportedException();
+    }
+
+    @Override
+    public void showPlayerProfileWithHints(String otherPlayerId, String otherPlayerInGameName, String currentPlayerInGameName) throws GameServiceException {
         throw new NotSupportedException();
     }
 

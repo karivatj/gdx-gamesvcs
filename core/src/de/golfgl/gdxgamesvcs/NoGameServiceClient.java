@@ -3,6 +3,7 @@ package de.golfgl.gdxgamesvcs;
 import com.badlogic.gdx.Gdx;
 
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
+import de.golfgl.gdxgamesvcs.friend.IFriendsDataResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ISaveGameStateResponseListener;
@@ -117,6 +118,21 @@ public class NoGameServiceClient implements IGameServiceClient {
     public void showAchievements() throws GameServiceException {
         Gdx.app.log(GAMESERVICE_ID, "Show achievements called.");
         throw new GameServiceException.NotSupportedException();
+    }
+
+    @Override
+    public void showFriends(IFriendsDataResponseListener callback) {
+        Gdx.app.log(GAMESERVICE_ID, "Show friends called.");
+    }
+
+    @Override
+    public void showPlayerProfile(String playerId) {
+        Gdx.app.log(GAMESERVICE_ID, "Show player profile called: " + playerId);
+    }
+
+    @Override
+    public void showPlayerProfileWithHints(String otherPlayerId, String otherPlayerInGameName, String currentPlayerInGameName) {
+        Gdx.app.log(GAMESERVICE_ID, "Show player profile with hints called: " + otherPlayerId + ", " + otherPlayerInGameName + ", " + currentPlayerInGameName);
     }
 
     @Override

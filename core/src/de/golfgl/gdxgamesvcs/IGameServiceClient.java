@@ -1,6 +1,7 @@
 package de.golfgl.gdxgamesvcs;
 
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
+import de.golfgl.gdxgamesvcs.friend.IFriendsDataResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ISaveGameStateResponseListener;
@@ -150,6 +151,29 @@ public interface IGameServiceClient {
      * @throws GameServiceException if not connected to service or operation not supported by client
      */
     void showAchievements() throws GameServiceException;
+
+    /**
+     * Get list of friends from the Friends API. Display a Intent if permission
+     * is needed to access the API.
+     */
+    public void showFriends(IFriendsDataResponseListener callback)  throws GameServiceException;
+
+    /**
+     * Retrieve and launch an Intent to show a player profile within the game.
+     */
+    public void showPlayerProfile(String playerId) throws GameServiceException;
+
+    /**
+     * Show a player profile within the game, with additional hints containing the
+     * game-specific names for both players.
+     *
+     * @param otherPlayerId The Play Games playerId of the player to view.
+     * @param otherPlayerInGameName The game-specific name of the player being viewed.
+     * @param currentPlayerInGameName The game-specific name of the player who is signed
+     *                                in. Hence if the player sends an invitation to the profile they are viewing,
+     *                                their game-specific name can be included.
+     */
+    public void showPlayerProfileWithHints(String otherPlayerId, String otherPlayerInGameName, String currentPlayerInGameName) throws GameServiceException;
 
     /**
      * Fetch current player's achievements.

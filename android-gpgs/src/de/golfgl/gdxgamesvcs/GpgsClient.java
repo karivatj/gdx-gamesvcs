@@ -1,8 +1,11 @@
 package de.golfgl.gdxgamesvcs;
 
+import static androidx.core.app.ActivityCompat.startActivityForResult;
+
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Intent;
-import android.util.Log;
+import android.content.IntentSender;
 import android.view.Gravity;
 
 import androidx.annotation.NonNull;
@@ -13,18 +16,18 @@ import com.badlogic.gdx.backends.android.AndroidEventListener;
 import com.badlogic.gdx.backends.android.AndroidGraphics;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.utils.Array;
-import com.google.android.gms.auth.api.Auth;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
-import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.games.AnnotatedData;
+import com.google.android.gms.games.FriendsResolutionRequiredException;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.GamesActivityResultCodes;
 import com.google.android.gms.games.GamesClient;
 import com.google.android.gms.games.LeaderboardsClient;
 import com.google.android.gms.games.Player;
+import com.google.android.gms.games.PlayerBuffer;
 import com.google.android.gms.games.SnapshotsClient;
 import com.google.android.gms.games.achievement.Achievement;
 import com.google.android.gms.games.achievement.AchievementBuffer;
@@ -37,15 +40,21 @@ import com.google.android.gms.games.snapshot.SnapshotMetadataBuffer;
 import com.google.android.gms.games.snapshot.SnapshotMetadataChange;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.TaskCompletionSource;
 import com.google.android.gms.tasks.Tasks;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import de.golfgl.gdxgamesvcs.achievement.IAchievement;
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
+import de.golfgl.gdxgamesvcs.friend.IFriendsDataResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ISaveGameStateResponseListener;
@@ -68,6 +77,8 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     public static final int RC_GPGS_SIGNIN = 9001;
     public static final int RC_LEADERBOARD = 9002;
     public static final int RC_ACHIEVEMENTS = 9003;
+    public static final int RC_SHOW_SHARING_FRIENDS_CONSENT = 9004;
+    public static final int RC_SHOW_PROFILE = 9005;
 
     private static final int MAX_SNAPSHOT_RESOLVE_RETRIES = 10;
 
@@ -80,9 +91,11 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     protected IGameServiceListener gameListener;
     protected IGameServiceIdMapper<String> gpgsLeaderboardIdMapper;
     protected IGameServiceIdMapper<String> gpgsAchievementIdMapper;
+    private IFriendsDataResponseListener friendsDataResponseListener;
 
     // Play Games
     private GoogleSignInOptions mGoogleSignInOptions;
+
     private String mPlayerDisplayName;
     private String mServerAuthCode;
 
@@ -210,26 +223,15 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                 Gdx.app.log(GAMESERVICE_ID, "Successfully signed in with player id " + result.getResult().getDisplayName());
                 mServerAuthCode = result.getResult().getServerAuthCode();
                 showGPGSPopUp();
-                getPlayerDisplayName(); //Trigger player display name fetch and cache the result
-                if (gameListener != null)
-                    gameListener.gsOnSessionActive();
-            } else {
-                // Sign in failed, show error to the user
-                Gdx.app.error(GAMESERVICE_ID, "Unable to sign in: " + resultCode + " Exception: " + result.getException().getMessage() + " trace: " + result.getException().toString());
-
-                // inform listener that connection attempt failed
+                getPlayerDisplayName();
                 if (gameListener != null) {
-                    if (resultCode == 0) { //User cancellation
-                        gameListener.gsOnSessionInactive();
-                    } else {
-                        gameListener.gsOnSessionInactive();
-                    }
+                    gameListener.gsOnSessionActive();
                 }
-
-                // Bring up an error dialog to alert the user that sign-in
-                // failed. The R.string.signin_failure should reference an error
-                // string in your strings.xml file that tells the user they
-                // could not be signed in, such as "Unable to sign in."
+            } else {
+                Gdx.app.error(GAMESERVICE_ID, "Unable to sign in: " + resultCode + " Exception: " + result.getException().getMessage() + " trace: " + result.getException().toString());
+                if (gameListener != null) {
+                    gameListener.gsOnSessionInactive();
+                }
 
                 String errorMsg;
                 switch (resultCode) {
@@ -246,15 +248,20 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                         errorMsg = null;
                 }
 
-                if (errorMsg != null && gameListener != null)
+                if (errorMsg != null && gameListener != null) {
                     gameListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed,
                             "Google Play Games: " + errorMsg, null);
+                }
             }
-            // check for "inconsistent state"
         } else if (resultCode == GamesActivityResultCodes.RESULT_RECONNECT_REQUIRED &&
                 (requestCode == RC_LEADERBOARD || requestCode == RC_ACHIEVEMENTS)) {
-            // force a disconnect to sync up state, ensuring that mClient reports "not connected"
             disconnect(false);
+        } else if (requestCode == RC_SHOW_SHARING_FRIENDS_CONSENT) {
+            if (resultCode == Activity.RESULT_OK) {
+                showFriends(friendsDataResponseListener);
+            } else {
+                Gdx.app.error(GAMESERVICE_ID, "User did not give consent to access friends");
+            }
         }
     }
 
@@ -719,6 +726,101 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     }
 
     /**
+     * Get list of friends from the Friends API. Display a Intent if permission
+     * is needed to access the API.
+     */
+    public void showFriends(final IFriendsDataResponseListener callback) {
+        if (isSessionActive()) {
+            getFriendsList(callback);
+        } else {
+            Gdx.app.error(GAMESERVICE_ID, "Could not show friends. Session is not active");
+            if (callback != null)
+                callback.onFriendsDataResponse(null);
+        }
+    }
+
+    private void getFriendsList(final IFriendsDataResponseListener callback) {
+        int PAGE_SIZE = 20;
+        this.friendsDataResponseListener = callback;
+        Games.getPlayersClient(myContext, getSignInAccount())
+                .loadFriends(PAGE_SIZE, /* forceReload= */ false)
+                .addOnSuccessListener(
+                        new OnSuccessListener<AnnotatedData<PlayerBuffer>>() {
+                            @Override
+                            public void onSuccess(AnnotatedData<PlayerBuffer> data) {
+                                PlayerBuffer playerBuffer = data.get();
+                                HashMap<String, String> friendsData = new HashMap();
+                                for (Player player : playerBuffer) {
+                                    String displayName = player.getDisplayName();
+                                    String playerId = player.getPlayerId();
+                                    friendsData.put(playerId, displayName);
+                                }
+                                playerBuffer.release();
+                                callback.onFriendsDataResponse(friendsData);
+                            }
+                        })
+                .addOnFailureListener(
+                        new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception exception) {
+                                if (exception instanceof FriendsResolutionRequiredException) {
+                                    PendingIntent pendingIntent =
+                                            ((FriendsResolutionRequiredException) exception)
+                                                    .getResolution();
+                                    try {
+                                        myContext.startIntentSenderForResult(
+                                                pendingIntent.getIntentSender(),
+                                                /* requestCode */ RC_SHOW_SHARING_FRIENDS_CONSENT, // replace with your request code
+                                                /* fillInIntent */ null,
+                                                /* flagsMask */ 0,
+                                                /* flagsValues */ 0,
+                                                /* extraFlags */ 0,
+                                                /* options */ null);
+                                    } catch (IntentSender.SendIntentException e) {
+                                        Gdx.app.error(GAMESERVICE_ID, "Failed to start intent sender: " + e.getMessage());
+                                    }
+                                }
+                            }
+                        });
+    }
+
+
+    /**
+     * Retrieve and launch an Intent to show a player profile within the game.
+     */
+    @Override
+    public void showPlayerProfile(String playerId) {
+        Games.getPlayersClient(myContext, getSignInAccount())
+                .getCompareProfileIntent(playerId)
+                .addOnSuccessListener(new OnSuccessListener<Intent>() {
+                    @Override
+                    public void onSuccess(Intent  intent) {
+                        startActivityForResult(myContext, intent, RC_SHOW_PROFILE, null);
+                    }});
+    }
+
+    /**
+     * Show a player profile within the game, with additional hints containing the
+     * game-specific names for both players.
+     *
+     * @param otherPlayerId The Play Games playerId of the player to view.
+     * @param otherPlayerInGameName The game-specific name of the player being viewed.
+     * @param currentPlayerInGameName The game-specific name of the player who is signed
+     *                                in. Hence if the player sends an invitation to the profile they are viewing,
+     *                                their game-specific name can be included.
+     */
+    @Override
+    public void showPlayerProfileWithHints(String otherPlayerId, String otherPlayerInGameName, String currentPlayerInGameName) {
+        Games.getPlayersClient(myContext, getSignInAccount())
+                .getCompareProfileIntentWithAlternativeNameHints(otherPlayerId, otherPlayerInGameName, currentPlayerInGameName)
+                .addOnSuccessListener(new OnSuccessListener<Intent>() {
+                    @Override
+                    public void onSuccess(Intent  intent) {
+                        startActivityForResult(myContext, intent, RC_SHOW_PROFILE, null);
+                    }});
+    }
+
+    /**
      * Override this method if you need to set some meta data, for example the description which is displayed
      * in the Play Games app
      *
@@ -764,7 +866,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                                 }
                             });
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            Gdx.app.error(GAMESERVICE_ID, "Failed to open game state: " + task.getException().getMessage());
                         }
                     } else {
                         Gdx.app.error(GAMESERVICE_ID, "Failed to open game state: " + task.getException().getMessage());
@@ -838,7 +940,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                                             try {
                                                 mSaveGameData = snapshot.getSnapshotContents().readFully();
                                             } catch (IOException e) {
-                                                e.printStackTrace();
+                                                Gdx.app.error(GAMESERVICE_ID, "Failed to read game state: " + e.getMessage());
                                             }
                                             if (callback != null)
                                                 callback.gsGameStateLoaded(mSaveGameData);
@@ -847,7 +949,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                                 }
                             });
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            Gdx.app.error(GAMESERVICE_ID, "Failed to load game state: " + openTask.getException().getMessage());
                         }
                     } else {
                         Gdx.app.error(GAMESERVICE_ID, "Failed to load game state: " + openTask.getException().getMessage());
@@ -900,7 +1002,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                                 });
                             }
                         } catch (Exception e) {
-                            e.printStackTrace();
+                            Gdx.app.error(GAMESERVICE_ID, "Failed to delete game state: " + openTask.getException().getMessage());
                         }
                     } else {
                         Gdx.app.log(GAMESERVICE_ID, "Could not delete game state " + id + ": " + openTask.getException().getMessage());
