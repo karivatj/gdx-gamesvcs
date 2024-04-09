@@ -1,6 +1,7 @@
 package de.golfgl.gdxgamesvcs;
 
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
+import de.golfgl.gdxgamesvcs.country.ICountryCodeResponseListener;
 import de.golfgl.gdxgamesvcs.friend.IFriendsDataResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
@@ -337,6 +338,15 @@ public interface IGameServiceClient {
      *                                       {@link #isFeatureSupported(GameServiceFeature)} prior to call this method.
      */
     boolean fetchGameStates(IFetchGameStatesListResponseListener callback);
+
+    /**
+     * Fetch current player's country code via Billing API BillingConfig
+     *
+     * @param callback the listener that will be notified about the result
+     * @throws UnsupportedOperationException if not supported by game service client, so check
+     *                                      {@link #isFeatureSupported(GameServiceFeature)} prior to call this method.
+     */
+    void fetchCountryCode(ICountryCodeResponseListener callback);
 
     /**
      * Queries if a certain feature is available for this Game Service

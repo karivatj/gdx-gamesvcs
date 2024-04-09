@@ -9,7 +9,16 @@ import android.content.IntentSender;
 import android.view.Gravity;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingConfig;
+import com.android.billingclient.api.BillingConfigResponseListener;
+import com.android.billingclient.api.BillingResult;
+import com.android.billingclient.api.GetBillingConfigParams;
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.android.AndroidApplication;
 import com.badlogic.gdx.backends.android.AndroidEventListener;
@@ -55,6 +64,7 @@ import java.util.Map;
 
 import de.golfgl.gdxgamesvcs.achievement.IAchievement;
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
+import de.golfgl.gdxgamesvcs.country.ICountryCodeResponseListener;
 import de.golfgl.gdxgamesvcs.friend.IFriendsDataResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
@@ -71,7 +81,11 @@ import de.golfgl.gdxgamesvcs.player.PlayerData;
  * Based on code made by Benjamin Schulte on 26.03.2017.
  */
 
-public class GpgsClient implements IGameServiceClient, AndroidEventListener {
+public class GpgsClient implements
+        IGameServiceClient,
+        AndroidEventListener,
+        BillingClientStateListener,
+        PurchasesUpdatedListener {
 
     public static final String GAMESERVICE_ID = IGameServiceClient.GS_GOOGLEPLAYGAMES_ID;
 
@@ -86,8 +100,11 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     protected Activity myContext;
     protected GoogleSignInClient mGoogleApiClient;
 
-    protected boolean snapshotsEnabled;
+    private BillingClient mBillingClient;
+
     protected boolean forceReload;
+
+    private boolean billingClientReady;
 
     protected IGameServiceListener gameListener;
     protected IGameServiceIdMapper<String> gpgsLeaderboardIdMapper;
@@ -134,12 +151,11 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
      * <p>
      *
      * @param context         your AndroidLauncher class
-     * @param enableSnapshots true if you want to activate save game state feature
      * @param webClientId     optional client id if one wants to authenticate to Firebase later on with Google Play account
      *                        See: https://firebase.google.com/docs/auth/android/play-games#integrate_play_games_sign-in_into_your_game
      * @return this for method chaining
      */
-    public GpgsClient initialize(AndroidApplication context, boolean enableSnapshots, String webClientId) {
+    public GpgsClient initialize(AndroidApplication context, String webClientId) {
 
         if (mGoogleApiClient != null)
             throw new IllegalStateException("Already initialized.");
@@ -150,8 +166,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
         context.addAndroidEventListener(this);
 
         GoogleSignInOptions.Builder builder = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_GAMES_SIGN_IN);
-
-        snapshotsEnabled = enableSnapshots;
 
         if (!webClientId.isEmpty()) {
             builder.requestServerAuthCode(webClientId);
@@ -161,6 +175,10 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
 
         mGoogleApiClient = GoogleSignIn.getClient(context, mGoogleSignInOptions);
 
+        billingClientReady = false;
+        mBillingClient = BillingClient.newBuilder(myContext).enablePendingPurchases().setListener(this).build();
+        mBillingClient.startConnection(this);
+
         return this;
     }
 
@@ -169,10 +187,9 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
      * <p>
      *
      * @param context         your AndroidLauncher class
-     * @param enableSnapshots true if you want to activate save game state feature
      * @return this for method chaining
      */
-    public GpgsClient initialize(AndroidApplication context, boolean enableSnapshots) {
+    public GpgsClient initialize(AndroidApplication context) {
 
         if (mGoogleApiClient != null)
             throw new IllegalStateException("Already initialized.");
@@ -184,11 +201,13 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
 
         GoogleSignInOptions.Builder builder = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_GAMES_SIGN_IN);
 
-        snapshotsEnabled = enableSnapshots;
-
         mGoogleSignInOptions = builder.build();
 
         mGoogleApiClient = GoogleSignIn.getClient(context, mGoogleSignInOptions);
+
+        billingClientReady = false;
+        mBillingClient = BillingClient.newBuilder(myContext).enablePendingPurchases().setListener(this).build();
+        mBillingClient.startConnection(this);
 
         return this;
     }
@@ -822,8 +841,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     public void saveGameState(final String fileId, final byte[] gameState, final long progressValue,
                               final ISaveGameStateResponseListener callback) {
         if (isSessionActive()) {
-            if (!snapshotsEnabled)
-                throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
             SnapshotsClient snapshotsClient = PlayGames.getSnapshotsClient(myContext);
 
@@ -898,8 +915,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public void loadGameState(final String id, final ILoadGameStateResponseListener callback) {
         if (isSessionActive()) {
-            if (!snapshotsEnabled)
-                throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
             final SnapshotsClient client = PlayGames.getSnapshotsClient(myContext);
 
@@ -951,8 +966,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public boolean deleteGameState(final String id, final ISaveGameStateResponseListener callback) {
         if (isSessionActive()) {
-            if (!snapshotsEnabled)
-                throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
             final SnapshotsClient client = PlayGames.getSnapshotsClient(myContext);
 
@@ -1007,8 +1020,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public boolean fetchGameStates(final IFetchGameStatesListResponseListener callback) {
         if (isSessionActive()) {
-            if (!snapshotsEnabled)
-                throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
             PlayGames.getSnapshotsClient(myContext).load(forceReload).addOnCompleteListener(new OnCompleteListener<AnnotatedData<SnapshotMetadataBuffer>>() {
                 @Override
@@ -1041,6 +1052,40 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                 callback.onFetchGameStatesListResponse(null);
             return false;
         }
+    }
+
+    @Override
+    public void fetchCountryCode(ICountryCodeResponseListener callback) {
+        if (!isSessionActive()) {
+            Gdx.app.error(GAMESERVICE_ID, "Could not fetch country code. Session is not active");
+            if (callback != null)
+                callback.countryCodeRequestFailed("Session not active");
+            return;
+        }
+
+        if (!billingClientReady) {
+            Gdx.app.error(GAMESERVICE_ID, "Billing client not ready. Cannot fetch country code");
+            if (callback != null)
+                callback.countryCodeRequestFailed("Billing client not ready");
+            return;
+        }
+
+        GetBillingConfigParams getBillingConfigParams = GetBillingConfigParams.newBuilder().build();
+        mBillingClient.getBillingConfigAsync(getBillingConfigParams,
+                new BillingConfigResponseListener() {
+                    @Override
+                    public void onBillingConfigResponse(@NonNull BillingResult billingResult, @Nullable BillingConfig billingConfig) {
+                        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK && billingConfig != null) {
+                            String countryCode = billingConfig.getCountryCode();
+                            if (callback != null)
+                                callback.countryCodeReceived(countryCode);
+                        } else {
+                            Gdx.app.error(GAMESERVICE_ID, "Failed to fetch country code: " + billingResult.getDebugMessage());
+                            if (callback != null)
+                                callback.countryCodeRequestFailed(billingResult.getDebugMessage());
+                        }
+                    }
+                });
     }
 
     /**
@@ -1097,7 +1142,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             case GameStateMultipleFiles:
             case FetchGameStates:
             case GameStateDelete:
-                return snapshotsEnabled;
             case ShowAchievementsUI:
             case ShowAllLeaderboardsUI:
             case ShowLeaderboardUI:
@@ -1111,5 +1155,27 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             default:
                 return false;
         }
+    }
+
+    @Override
+    public void onBillingServiceDisconnected() {
+        Gdx.app.error(GAMESERVICE_ID, "Billing service disconnected");
+        billingClientReady = false;
+    }
+
+    @Override
+    public void onBillingSetupFinished(@NonNull BillingResult billingResult) {
+        if (billingResult.getResponseCode() == BillingClient.BillingResponseCode.OK) {
+            Gdx.app.log(GAMESERVICE_ID, "Billing service connected");
+            billingClientReady = true;
+        } else {
+            Gdx.app.error(GAMESERVICE_ID, "Billing service setup failed: " + billingResult.getDebugMessage());
+            billingClientReady = false;
+        }
+    }
+
+    @Override
+    public void onPurchasesUpdated(@NonNull BillingResult billingResult, @Nullable List<Purchase> list) {
+        Gdx.app.log(GAMESERVICE_ID, "Purchases updated: " + billingResult.getResponseCode());
     }
 }

@@ -3,6 +3,7 @@ package de.golfgl.gdxgamesvcs;
 import com.badlogic.gdx.Gdx;
 
 import de.golfgl.gdxgamesvcs.achievement.IFetchAchievementsResponseListener;
+import de.golfgl.gdxgamesvcs.country.ICountryCodeResponseListener;
 import de.golfgl.gdxgamesvcs.friend.IFriendsDataResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.IFetchGameStatesListResponseListener;
 import de.golfgl.gdxgamesvcs.gamestate.ILoadGameStateResponseListener;
@@ -203,6 +204,11 @@ public class NoGameServiceClient implements IGameServiceClient {
     @Override
     public boolean fetchGameStates(IFetchGameStatesListResponseListener callback) {
         return false;
+    }
+
+    @Override
+    public void fetchCountryCode(ICountryCodeResponseListener callback) {
+        Gdx.app.log(GAMESERVICE_ID, "Fetch country code called.");
     }
 
     @Override
