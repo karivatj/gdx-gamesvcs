@@ -9,8 +9,6 @@ buildscript {
     }
 }
 
-apply plugin: 'com.google.gms.google-services'
-
 android {
     compileSdkVersion compileSdkVer
 
@@ -28,14 +26,14 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_7
-        targetCompatibility JavaVersion.VERSION_1_7
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
 dependencies {
     implementation 'com.google.android.gms:play-services-auth:21.0.0'
-    implementation 'com.google.android.gms:play-services-games:23.1.0'
+    implementation 'com.google.android.gms:play-services-games-v2:20.0.0'
 }
 
 ext {

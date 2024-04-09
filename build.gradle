@@ -23,7 +23,7 @@ allprojects {
     apply plugin: "idea"
 
     ext {
-        minSdkVer = 16
+        minSdkVer = 19
         targetSdkVer = 34
         compileSdkVer = 34
         buildToolsVer = '34.0.1'

@@ -26,6 +26,7 @@ import com.google.android.gms.games.Games;
 import com.google.android.gms.games.GamesActivityResultCodes;
 import com.google.android.gms.games.GamesClient;
 import com.google.android.gms.games.LeaderboardsClient;
+import com.google.android.gms.games.PlayGames;
 import com.google.android.gms.games.Player;
 import com.google.android.gms.games.PlayerBuffer;
 import com.google.android.gms.games.SnapshotsClient;
@@ -152,10 +153,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
 
         snapshotsEnabled = enableSnapshots;
 
-        if (snapshotsEnabled) {
-            builder.requestScopes(Games.SCOPE_GAMES_SNAPSHOTS);
-        }
-
         if (!webClientId.isEmpty()) {
             builder.requestServerAuthCode(webClientId);
         }
@@ -189,10 +186,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
 
         snapshotsEnabled = enableSnapshots;
 
-        if (snapshotsEnabled) {
-            builder.requestScopes(Games.SCOPE_GAMES_SNAPSHOTS);
-        }
-
         mGoogleSignInOptions = builder.build();
 
         mGoogleApiClient = GoogleSignIn.getClient(context, mGoogleSignInOptions);
@@ -202,12 +195,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
 
     private GoogleSignInAccount getSignInAccount() {
         return GoogleSignIn.getLastSignedInAccount(myContext);
-    }
-
-    private void showGPGSPopUp() {
-        GamesClient gamesClient = Games.getGamesClient(myContext, getSignInAccount());
-        gamesClient.setGravityForPopups(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
-        gamesClient.setViewForPopups(((AndroidGraphics) Gdx.graphics).getView());
     }
 
     @Override
@@ -222,7 +209,6 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             if (result.isSuccessful()) {
                 Gdx.app.log(GAMESERVICE_ID, "Successfully signed in with player id " + result.getResult().getDisplayName());
                 mServerAuthCode = result.getResult().getServerAuthCode();
-                showGPGSPopUp();
                 getPlayerDisplayName();
                 if (gameListener != null) {
                     gameListener.gsOnSessionActive();
@@ -311,10 +297,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                 public void onComplete(Task<GoogleSignInAccount> task) {
                     if (task.isSuccessful()) {
                         Gdx.app.log(GAMESERVICE_ID, "Silent sign in done successfully with player id " + task.getResult().getDisplayName());
-                        mServerAuthCode = task.getResult().getServerAuthCode();
-                        // Show a visual indication about the sign in
-                        showGPGSPopUp();
-                        // Cache player display name for later use
+                        mServerAuthCode = task.getResult().getServerAuthCode();// Cache player display name for later use
                         getPlayerDisplayName();
                         if (gameListener != null) {
                             gameListener.gsOnSessionActive();
@@ -376,7 +359,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public String getPlayerDisplayName() {
         if (isSessionActive()) {
-            Games.getPlayersClient(myContext, getSignInAccount()).getCurrentPlayer().addOnCompleteListener(new OnCompleteListener<Player>() {
+            PlayGames.getPlayersClient(myContext).getCurrentPlayer().addOnCompleteListener(new OnCompleteListener<Player>() {
                 @Override
                 public void onComplete(@NonNull Task<Player> task) {
                     if (task.isSuccessful()) {
@@ -394,7 +377,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public boolean getPlayerData(final IPlayerDataResponseListener callback) {
         if (isSessionActive()) {
-            Games.getPlayersClient(myContext, getSignInAccount()).getCurrentPlayer().addOnCompleteListener(new OnCompleteListener<Player>() {
+            PlayGames.getPlayersClient(myContext).getCurrentPlayer().addOnCompleteListener(new OnCompleteListener<Player>() {
                 @Override
                 public void onComplete(@NonNull Task<Player> task) {
                     if (task.isSuccessful()) {
@@ -439,7 +422,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             if (gpgsLeaderboardIdMapper != null)
                 leaderBoardId = gpgsLeaderboardIdMapper.mapToGsId(leaderBoardId);
 
-            LeaderboardsClient leaderboardsClient = Games.getLeaderboardsClient(myContext, getSignInAccount());
+            LeaderboardsClient leaderboardsClient = PlayGames.getLeaderboardsClient(myContext);
 
             if (leaderBoardId != null) {
                 leaderboardsClient.getLeaderboardIntent(leaderBoardId).addOnCompleteListener(new OnCompleteListener<Intent>() {
@@ -472,7 +455,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public void showAchievements() throws GameServiceException {
         if (isSessionActive()) {
-            Games.getAchievementsClient(myContext, getSignInAccount()).getAchievementsIntent().addOnCompleteListener(new OnCompleteListener<Intent>() {
+            PlayGames.getAchievementsClient(myContext).getAchievementsIntent().addOnCompleteListener(new OnCompleteListener<Intent>() {
                 @Override
                 public void onComplete(@NonNull Task<Intent> task) {
                     if (task.isSuccessful()) {
@@ -490,7 +473,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public boolean fetchAchievements(final IFetchAchievementsResponseListener callback) {
         if(isSessionActive()) {
-            Games.getAchievementsClient(myContext, getSignInAccount()).load(forceReload).addOnCompleteListener(new OnCompleteListener<AnnotatedData<AchievementBuffer>>() {
+            PlayGames.getAchievementsClient(myContext).load(forceReload).addOnCompleteListener(new OnCompleteListener<AnnotatedData<AchievementBuffer>>() {
                 @Override
                 public void onComplete(@NonNull Task<AnnotatedData<AchievementBuffer>> task) {
                     if (task.isSuccessful()) {
@@ -545,9 +528,9 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                 return false;
 
             if (tag != null) {
-                Games.getLeaderboardsClient(myContext, getSignInAccount()).submitScore(leaderboardId, score, tag);
+                PlayGames.getLeaderboardsClient(myContext).submitScore(leaderboardId, score, tag);
             } else {
-                Games.getLeaderboardsClient(myContext, getSignInAccount()).submitScore(leaderboardId, score);
+                PlayGames.getLeaderboardsClient(myContext).submitScore(leaderboardId, score);
             }
 
             return true;
@@ -560,7 +543,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public boolean incrementLeaderboard(final String leaderboardId, final long increment) {
         if (isSessionActive()) {
-            final LeaderboardsClient mLeaderboardsClient = Games.getLeaderboardsClient(myContext, getSignInAccount());
+            final LeaderboardsClient mLeaderboardsClient = PlayGames.getLeaderboardsClient(myContext);
 
             mLeaderboardsClient.loadCurrentPlayerLeaderboardScore(
                     leaderboardId,
@@ -603,7 +586,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             else
                 resolvedLeaderboardId = origLeaderboardId;
 
-            LeaderboardsClient leaderboardsClient = Games.getLeaderboardsClient(myContext, getSignInAccount());
+            LeaderboardsClient leaderboardsClient = PlayGames.getLeaderboardsClient(myContext);
 
             //Validate timespan and collection
             timespan = timespan == 0 ? LeaderboardVariant.TIME_SPAN_DAILY : timespan == 1 ? LeaderboardVariant.TIME_SPAN_WEEKLY : LeaderboardVariant.TIME_SPAN_ALL_TIME;
@@ -681,7 +664,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     @Override
     public boolean submitEvent(String eventId, int increment) {
         if (isSessionActive()) {
-            Games.getEventsClient(myContext, getSignInAccount()).increment(eventId, increment);
+            PlayGames.getEventsClient(myContext).increment(eventId, increment);
             return true;
         } else {
             Gdx.app.error(GAMESERVICE_ID, "Could not submit event. Session is not active");
@@ -696,7 +679,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                 achievementId = gpgsAchievementIdMapper.mapToGsId(achievementId);
 
             if (achievementId != null) {
-                Games.getAchievementsClient(myContext, getSignInAccount()).unlock(achievementId);
+                PlayGames.getAchievementsClient(myContext).unlock(achievementId);
                 return true;
             } else {
                 return false;
@@ -714,7 +697,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
                 achievementId = gpgsAchievementIdMapper.mapToGsId(achievementId);
 
             if (achievementId != null) {
-                Games.getAchievementsClient(myContext, getSignInAccount()).increment(achievementId, incNum);
+                PlayGames.getAchievementsClient(myContext).increment(achievementId, incNum);
                 return true;
             } else {
                 return false;
@@ -742,7 +725,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
     private void getFriendsList(final IFriendsDataResponseListener callback) {
         int PAGE_SIZE = 20;
         this.friendsDataResponseListener = callback;
-        Games.getPlayersClient(myContext, getSignInAccount())
+        PlayGames.getPlayersClient(myContext)
                 .loadFriends(PAGE_SIZE, /* forceReload= */ false)
                 .addOnSuccessListener(
                         new OnSuccessListener<AnnotatedData<PlayerBuffer>>() {
@@ -790,7 +773,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
      */
     @Override
     public void showPlayerProfile(String playerId) {
-        Games.getPlayersClient(myContext, getSignInAccount())
+        PlayGames.getPlayersClient(myContext)
                 .getCompareProfileIntent(playerId)
                 .addOnSuccessListener(new OnSuccessListener<Intent>() {
                     @Override
@@ -811,7 +794,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
      */
     @Override
     public void showPlayerProfileWithHints(String otherPlayerId, String otherPlayerInGameName, String currentPlayerInGameName) {
-        Games.getPlayersClient(myContext, getSignInAccount())
+        PlayGames.getPlayersClient(myContext)
                 .getCompareProfileIntentWithAlternativeNameHints(otherPlayerId, otherPlayerInGameName, currentPlayerInGameName)
                 .addOnSuccessListener(new OnSuccessListener<Intent>() {
                     @Override
@@ -842,7 +825,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             if (!snapshotsEnabled)
                 throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
-            SnapshotsClient snapshotsClient = Games.getSnapshotsClient(myContext, getSignInAccount());
+            SnapshotsClient snapshotsClient = PlayGames.getSnapshotsClient(myContext);
 
             // Open the snapshot, creating if necessary
             snapshotsClient.open(fileId, true).addOnCompleteListener(new OnCompleteListener<SnapshotsClient.DataOrConflict<Snapshot>>() {
@@ -897,7 +880,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
         metaDataBuilder = setSaveGameMetaData(metaDataBuilder, id, gameState, progressValue);
         SnapshotMetadataChange metadataChange = metaDataBuilder.build();
 
-        Games.getSnapshotsClient(myContext, getSignInAccount()).commitAndClose(snapshot, metadataChange).addOnCompleteListener(new OnCompleteListener<SnapshotMetadata>() {
+        PlayGames.getSnapshotsClient(myContext).commitAndClose(snapshot, metadataChange).addOnCompleteListener(new OnCompleteListener<SnapshotMetadata>() {
             @Override
             public void onComplete(@NonNull Task<SnapshotMetadata> task) {
                 if (task.isSuccessful()) {
@@ -918,7 +901,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             if (!snapshotsEnabled)
                 throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
-            final SnapshotsClient client = Games.getSnapshotsClient(myContext, getSignInAccount());
+            final SnapshotsClient client = PlayGames.getSnapshotsClient(myContext);
 
             // Open the snapshot, creating if necessary
             client.open(id, true).addOnCompleteListener(new OnCompleteListener<SnapshotsClient.DataOrConflict<Snapshot>>() {
@@ -971,7 +954,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             if (!snapshotsEnabled)
                 throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
-            final SnapshotsClient client = Games.getSnapshotsClient(myContext, getSignInAccount());
+            final SnapshotsClient client = PlayGames.getSnapshotsClient(myContext);
 
             // Open the snapshot, creating if necessary
             client.open(id, false).addOnCompleteListener(new OnCompleteListener<SnapshotsClient.DataOrConflict<Snapshot>>() {
@@ -1027,7 +1010,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             if (!snapshotsEnabled)
                 throw new UnsupportedOperationException("To use game states, enable Drive API when initializing");
 
-            Games.getSnapshotsClient(myContext, getSignInAccount()).load(forceReload).addOnCompleteListener(new OnCompleteListener<AnnotatedData<SnapshotMetadataBuffer>>() {
+            PlayGames.getSnapshotsClient(myContext).load(forceReload).addOnCompleteListener(new OnCompleteListener<AnnotatedData<SnapshotMetadataBuffer>>() {
                 @Override
                 public void onComplete(@NonNull Task<AnnotatedData<SnapshotMetadataBuffer>> task) {
                     if (task.isSuccessful()) {
@@ -1089,7 +1072,7 @@ public class GpgsClient implements IGameServiceClient, AndroidEventListener {
             resolvedSnapshot = conflictSnapshot;
         }
 
-        return Games.getSnapshotsClient(myContext, GoogleSignIn.getLastSignedInAccount(myContext))
+        return PlayGames.getSnapshotsClient(myContext)
                 .resolveConflict(conflict.getConflictId(), resolvedSnapshot)
                 .continueWithTask(
                         new Continuation<SnapshotsClient.DataOrConflict<Snapshot>, Task<Snapshot>>() {

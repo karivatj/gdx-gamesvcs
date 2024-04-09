@@ -1,5 +1,5 @@
-targetCompatibility = JavaVersion.VERSION_1_7
-sourceCompatibility = JavaVersion.VERSION_1_7
+targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_1_8
 
 sourceSets.main.java.srcDirs = [ "src/" ]
 sourceSets.test.java.srcDirs = [ "test/", "test-resources/" ]
