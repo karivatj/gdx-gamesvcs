@@ -30,12 +30,14 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.games.AnnotatedData;
+import com.google.android.gms.games.AuthenticationResult;
 import com.google.android.gms.games.FriendsResolutionRequiredException;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.GamesActivityResultCodes;
 import com.google.android.gms.games.GamesClient;
 import com.google.android.gms.games.LeaderboardsClient;
 import com.google.android.gms.games.PlayGames;
+import com.google.android.gms.games.PlayGamesSdk;
 import com.google.android.gms.games.Player;
 import com.google.android.gms.games.PlayerBuffer;
 import com.google.android.gms.games.SnapshotsClient;
@@ -89,7 +91,6 @@ public class GpgsClient implements
 
     public static final String GAMESERVICE_ID = IGameServiceClient.GS_GOOGLEPLAYGAMES_ID;
 
-    public static final int RC_GPGS_SIGNIN = 9001;
     public static final int RC_LEADERBOARD = 9002;
     public static final int RC_ACHIEVEMENTS = 9003;
     public static final int RC_SHOW_SHARING_FRIENDS_CONSENT = 9004;
@@ -98,24 +99,23 @@ public class GpgsClient implements
     private static final int MAX_SNAPSHOT_RESOLVE_RETRIES = 10;
 
     protected Activity myContext;
-    protected GoogleSignInClient mGoogleApiClient;
 
     private BillingClient mBillingClient;
 
     protected boolean forceReload;
 
     private boolean billingClientReady;
+    private boolean isConnected;
+    private boolean isInitialized;
 
     protected IGameServiceListener gameListener;
     protected IGameServiceIdMapper<String> gpgsLeaderboardIdMapper;
     protected IGameServiceIdMapper<String> gpgsAchievementIdMapper;
     private IFriendsDataResponseListener friendsDataResponseListener;
 
-    // Play Games
-    private GoogleSignInOptions mGoogleSignInOptions;
-
     private String mPlayerDisplayName;
     private String mServerAuthCode;
+    private String mWebClientId;
 
     /**
      * sets up the mapper for leader board ids
@@ -157,7 +157,7 @@ public class GpgsClient implements
      */
     public GpgsClient initialize(AndroidApplication context, String webClientId) {
 
-        if (mGoogleApiClient != null)
+        if (isInitialized)
             throw new IllegalStateException("Already initialized.");
 
         myContext = context;
@@ -165,19 +165,16 @@ public class GpgsClient implements
         // We need to receive onActivityResult
         context.addAndroidEventListener(this);
 
-        GoogleSignInOptions.Builder builder = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_GAMES_SIGN_IN);
-
-        if (!webClientId.isEmpty()) {
-            builder.requestServerAuthCode(webClientId);
-        }
-
-        mGoogleSignInOptions = builder.build();
-
-        mGoogleApiClient = GoogleSignIn.getClient(context, mGoogleSignInOptions);
-
         billingClientReady = false;
         mBillingClient = BillingClient.newBuilder(myContext).enablePendingPurchases().setListener(this).build();
         mBillingClient.startConnection(this);
+
+        isConnected = false;
+        PlayGamesSdk.initialize(myContext);
+
+        mWebClientId = webClientId;
+
+        isInitialized = true;
 
         return this;
     }
@@ -186,12 +183,12 @@ public class GpgsClient implements
      * Initializes the GoogleApiClient. Give your main AndroidLauncher as context.
      * <p>
      *
-     * @param context         your AndroidLauncher class
+     * @param context -your AndroidLauncher class
      * @return this for method chaining
      */
     public GpgsClient initialize(AndroidApplication context) {
 
-        if (mGoogleApiClient != null)
+        if (isInitialized)
             throw new IllegalStateException("Already initialized.");
 
         myContext = context;
@@ -199,15 +196,16 @@ public class GpgsClient implements
         // We need to receive onActivityResult
         context.addAndroidEventListener(this);
 
-        GoogleSignInOptions.Builder builder = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_GAMES_SIGN_IN);
-
-        mGoogleSignInOptions = builder.build();
-
-        mGoogleApiClient = GoogleSignIn.getClient(context, mGoogleSignInOptions);
-
         billingClientReady = false;
         mBillingClient = BillingClient.newBuilder(myContext).enablePendingPurchases().setListener(this).build();
         mBillingClient.startConnection(this);
+
+        isConnected = false;
+        PlayGamesSdk.initialize(myContext);
+
+        mWebClientId = null;
+
+        isInitialized = true;
 
         return this;
     }
@@ -223,49 +221,14 @@ public class GpgsClient implements
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == RC_GPGS_SIGNIN) {
-            Task<GoogleSignInAccount> result = GoogleSignIn.getSignedInAccountFromIntent(data);
-            if (result.isSuccessful()) {
-                Gdx.app.log(GAMESERVICE_ID, "Successfully signed in with player id " + result.getResult().getDisplayName());
-                mServerAuthCode = result.getResult().getServerAuthCode();
-                getPlayerDisplayName();
-                if (gameListener != null) {
-                    gameListener.gsOnSessionActive();
-                }
-            } else {
-                Gdx.app.error(GAMESERVICE_ID, "Unable to sign in: " + resultCode + " Exception: " + result.getException().getMessage() + " trace: " + result.getException().toString());
-                if (gameListener != null) {
-                    gameListener.gsOnSessionInactive();
-                }
-
-                String errorMsg;
-                switch (resultCode) {
-                    case GamesActivityResultCodes.RESULT_APP_MISCONFIGURED:
-                        errorMsg = "The application is incorrectly configured. Check that the package name and signing " +
-                                "certificate match the client ID created in Developer Console. Also, if the application " +
-                                "is not yet published, check that the account you are trying to sign in with is listed as" +
-                                " a tester account. See logs for more information.";
-                        break;
-                    case GamesActivityResultCodes.RESULT_SIGN_IN_FAILED:
-                        errorMsg = "Failed to sign in. Please check your network connection and try again.";
-                        break;
-                    default:
-                        errorMsg = null;
-                }
-
-                if (errorMsg != null && gameListener != null) {
-                    gameListener.gsShowErrorToUser(IGameServiceListener.GsErrorType.errorLoginFailed,
-                            "Google Play Games: " + errorMsg, null);
-                }
-            }
-        } else if (resultCode == GamesActivityResultCodes.RESULT_RECONNECT_REQUIRED &&
+        if (resultCode == GamesActivityResultCodes.RESULT_RECONNECT_REQUIRED &&
                 (requestCode == RC_LEADERBOARD || requestCode == RC_ACHIEVEMENTS)) {
-            disconnect(false);
+            Gdx.app.error(GAMESERVICE_ID, "Reconnect required. User needs to sign in again.");
         } else if (requestCode == RC_SHOW_SHARING_FRIENDS_CONSENT) {
             if (resultCode == Activity.RESULT_OK) {
                 showFriends(friendsDataResponseListener);
             } else {
-                Gdx.app.error(GAMESERVICE_ID, "User did not give consent to access friends");
+                Gdx.app.error(GAMESERVICE_ID, "User did not give consent to access friends.");
             }
         }
     }
@@ -277,120 +240,87 @@ public class GpgsClient implements
 
     @Override
     public String getServerAuthCode() {
-        return getSignInAccount().getServerAuthCode();
+        return mServerAuthCode;
     }
+
+
+    private final OnCompleteListener<AuthenticationResult> checkAuthentication = new OnCompleteListener<AuthenticationResult>() {
+        @Override
+        public void onComplete(@NonNull Task<AuthenticationResult> task) {
+            if (task.isSuccessful() && task.getResult().isAuthenticated()) {
+                // Continue with Play Games Services
+                Gdx.app.log(GAMESERVICE_ID, "Successfully signed in to Google Play Services.");
+                isConnected = true;
+                PlayGames.getPlayersClient(myContext).getCurrentPlayer().addOnCompleteListener(new OnCompleteListener<Player>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Player> task) {
+                        if (task.isSuccessful()) {
+                            Gdx.app.log(GAMESERVICE_ID, "Successfully fetched player id: " + task.getResult().getDisplayName());
+                            mPlayerDisplayName = task.getResult().getDisplayName();
+                        } else {
+                            Gdx.app.error(GAMESERVICE_ID, "There was an issue communicating with the server while fetching player id. Exception: " + task.getException());
+                            mPlayerDisplayName = null;
+                        }
+                    }
+                });
+
+                PlayGames.getGamesSignInClient(myContext).requestServerSideAccess(mWebClientId, false).addOnCompleteListener(new OnCompleteListener<String>() {
+                    @Override
+                    public void onComplete(@NonNull Task<String> task) {
+                        if (task.isSuccessful()) {
+                            Gdx.app.log(GAMESERVICE_ID, "Successfully fetched server auth code.");
+                            mServerAuthCode = task.getResult();
+                            gameListener.gsOnSessionActive();
+                        } else {
+                            Gdx.app.error(GAMESERVICE_ID, "There was an issue communicating with the server while fetching server auth code. Exception: " + task.getException());
+                            mServerAuthCode = null;
+                            gameListener.gsOnSessionInactive();
+                        }
+                    }
+                });
+            } else {
+                Gdx.app.error(GAMESERVICE_ID, "Unable to sign in. User must sign in manually. Exception: " + task.getException());
+                mPlayerDisplayName = null;
+                mServerAuthCode =  null;
+                isConnected = false;
+            }
+        }
+    };
 
     @Override
     public boolean resumeSession() {
-        return connect(true);
+        // Since the state of the signed in user can change when the activity is not active
+        // it is recommended to try and sign in silently from when the app resumes.
+        PlayGames.getGamesSignInClient(myContext).isAuthenticated()
+                .addOnCompleteListener(checkAuthentication);
+
+        return true;
     }
 
     @Override
     public boolean logIn() {
-        return connect(false);
-    }
-
-    public boolean connect(final boolean autoStart) {
-        if (mGoogleApiClient == null) {
-            Gdx.app.error(GAMESERVICE_ID, "Call initialize first");
-            throw new IllegalStateException();
+        if (isSessionActive()) {
+            return true;
         }
 
-        Gdx.app.log(GAMESERVICE_ID, "Trying to sign in silently to Google Play Services");
-
-        //Attempt silent sign in
-        Task<GoogleSignInAccount> task = mGoogleApiClient.silentSignIn();
-
-        //Immediate result available
-        if(task.isSuccessful()) {
-            Gdx.app.log(GAMESERVICE_ID, "Silent sign in done successfully with player id " + task.getResult().getDisplayName());
-            mServerAuthCode = task.getResult().getServerAuthCode();
-            getPlayerDisplayName();
-            if (gameListener != null) {
-                gameListener.gsOnSessionActive();
-            }
-        } else {
-            //Wait for the result and publish them later on
-            task.addOnCompleteListener(new OnCompleteListener<GoogleSignInAccount>() {
-                @Override
-                public void onComplete(Task<GoogleSignInAccount> task) {
-                    if (task.isSuccessful()) {
-                        Gdx.app.log(GAMESERVICE_ID, "Silent sign in done successfully with player id " + task.getResult().getDisplayName());
-                        mServerAuthCode = task.getResult().getServerAuthCode();// Cache player display name for later use
-                        getPlayerDisplayName();
-                        if (gameListener != null) {
-                            gameListener.gsOnSessionActive();
-                        }
-                    } else {
-                        if (autoStart) {
-                            Gdx.app.log(GAMESERVICE_ID, "Unable to sign in silently. User has explicitly signed out. Please sign in manually");
-                            mGoogleApiClient.signOut();
-                        } else {
-                            Gdx.app.log(GAMESERVICE_ID, "Unable to sign in silently. Starting manual sign-in flow");
-                            myContext.startActivityForResult(mGoogleApiClient.getSignInIntent(), RC_GPGS_SIGNIN);
-                        }
-                    }
-                }
-            });
-        }
+        PlayGames.getGamesSignInClient(myContext).signIn()
+                .addOnCompleteListener(checkAuthentication);
 
         return true;
     }
 
     @Override
     public void logOff() {
-        this.disconnect(true);
+        // Google Play Games V2 API has no sign out method
     }
 
     @Override
     public void pauseSession() {
-        //No need to do anything. Disconnection is done only when user explicitly request for it.
     }
 
-    public void disconnect(final boolean explicit) {
-        if (isSessionActive()) {
-            Gdx.app.log(GAMESERVICE_ID, "Disconnecting");
-            mGoogleApiClient.signOut().addOnCompleteListener(new OnCompleteListener<Void>() {
-                @Override
-                public void onComplete(@NonNull Task<Void> task) {
-                    if (task.isSuccessful()) {
-                        if (gameListener != null)
-                            if (explicit) {
-                                gameListener.gsOnSessionInactive();
-                            } else {
-                                gameListener.gsOnSessionInactive();
-                            }
-                    } else {
-                        Gdx.app.error(GAMESERVICE_ID, "Error while trying to disconnect: " + task.getException().getMessage());
-                    }
-                }
-            });
-        }
-    }
-
-    /**
-     * Fetches the player display name asynchronously from the Google API
-     * <p>
-     *
-     * @return Cached result of the player display name. Display name fetching is done in the
-     *         background and updated when / if data is fetched successfully.
-     */
     @Override
     public String getPlayerDisplayName() {
-        if (isSessionActive()) {
-            PlayGames.getPlayersClient(myContext).getCurrentPlayer().addOnCompleteListener(new OnCompleteListener<Player>() {
-                @Override
-                public void onComplete(@NonNull Task<Player> task) {
-                    if (task.isSuccessful()) {
-                        mPlayerDisplayName = task.getResult().getDisplayName();
-                    } else {
-                        Gdx.app.error(GAMESERVICE_ID, "Failed to get player display name: " + task.getException().getMessage());
-                    }
-                }
-            });
-        }
-
-        return mPlayerDisplayName;
+        return null;
     }
 
     @Override
@@ -417,16 +347,14 @@ public class GpgsClient implements
             });
             return true;
         } else {
+            Gdx.app.error(GAMESERVICE_ID, "Could not get player data. Session is not active");
             return false;
         }
     }
 
     @Override
     public boolean isSessionActive() {
-        if (getSignInAccount() == null) {
-            return false;
-        }
-        return GoogleSignIn.hasPermissions(getSignInAccount(), mGoogleSignInOptions.getScopeArray());
+        return isConnected;
     }
 
     @Override
@@ -658,13 +586,12 @@ public class GpgsClient implements
         if(callback != null) {
             if (scores != null && scores.getCount() > 0) {
                 Array<ILeaderBoardEntry> gpgsLbEs = new Array<>(scores.getCount());
-                String playerDisplayName = getPlayerDisplayName();
                 Gdx.app.log(GAMESERVICE_ID, "Leaderboard entries size: " + scores.getCount());
                 for (LeaderboardScore score : scores) {
                     GpgsLeaderBoardEntry gpgsLbE = new GpgsLeaderBoardEntry();
-                    Gdx.app.log(GAMESERVICE_ID, "UserDisplayName: " + gpgsLbE.userDisplayName + " player: " + playerDisplayName);
+                    Gdx.app.log(GAMESERVICE_ID, "UserDisplayName: " + gpgsLbE.userDisplayName + " player: " + mPlayerDisplayName);
                     gpgsLbE.userDisplayName = score.getScoreHolderDisplayName();
-                    gpgsLbE.currentPlayer = gpgsLbE.userDisplayName.equalsIgnoreCase(playerDisplayName);
+                    gpgsLbE.currentPlayer = gpgsLbE.userDisplayName.equalsIgnoreCase(mPlayerDisplayName);
                     gpgsLbE.formattedValue = score.getDisplayScore();
                     gpgsLbE.scoreRank = score.getDisplayRank();
                     gpgsLbE.userId = score.getScoreHolder().getPlayerId();
